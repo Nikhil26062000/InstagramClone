@@ -1,12 +1,23 @@
 import React, { useRef, useState } from "react";
 import "./index.css";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { updateProfile } from "firebase/auth";
+import { useDispatch } from "react-redux";
+import { addUser } from "./utils/userSlice";
+import { auth } from "./utils/firebase";
+import { useNavigate } from "react-router-dom";
+import Footer from "./Footer";
+
 
 
 const Login = () => {
   const [showSignIn, setShowSignIn] = useState(true);
+  const [errorMessage,setErrorMessage] = useState();
   const username = useRef();
   const email = useRef();
   const password = useRef();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const toggleForm = () => {
     setShowSignIn(!showSignIn);
@@ -14,6 +25,18 @@ const Login = () => {
 
   const handleLogin = () => {
     console.log("Login button ");
+    signInWithEmailAndPassword(auth, email.current.value, password.current.value)
+     .then((userCredential) => {
+    // Signed in 
+    const user = userCredential.user;
+    navigate("/home");
+    // ...
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    setErrorMessage(errorMessage);
+  });
   }
 
   const handleSignUp = () => {
@@ -21,10 +44,47 @@ const Login = () => {
     console.log(username.current.value);
     console.log(email.current.value);
     console.log(password.current.value);
+
+    createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
+  .then((userCredential) => {
+    // Signed up 
+    const user = userCredential.user;
+    updateProfile(auth.currentUser, {
+        displayName: username.current.value,
+      }).then(() => {
+        const { uid, email, displayName } = auth.currentUser
+        dispatch(
+          addUser({
+            uid: uid,
+            email: email,
+            displayName: displayName,
+           
+            
+          })
+        );
+        navigate("/home")
+        
+        
+        // Profile updated!
+        // ...
+      }).catch((error) => {
+        // An error occurred
+        setErrorMessage(error.message);
+        // ...
+      });
+    // ...
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    setErrorMessage(errorMessage);
+    // ..
+  });
   }
 
 
   return (
+    <div>
     <div className="bg-gray-100 flex justify-center items-center h-screen">
       <div className="bg-white border border-gray-300 rounded-lg p-8 shadow-md max-w-sm w-full">
         <h1 className="text-4xl font-semibold mb-6 text-center">Instagram</h1>
@@ -49,11 +109,13 @@ const Login = () => {
         {showSignIn ? (
           <form onSubmit={(e)=>e.preventDefault()}>
             <input
+              ref={email}
               type="text"
               placeholder="Phone number, username, or email"
               className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:border-blue-500"
             />
             <input
+              ref={password}
               type="password"
               placeholder="Password"
               className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4 focus:outline-none focus:border-blue-500"
@@ -107,6 +169,10 @@ const Login = () => {
           </button>
         </div>
       </div>
+
+
+    </div>
+    <Footer/>
     </div>
   );
 };
